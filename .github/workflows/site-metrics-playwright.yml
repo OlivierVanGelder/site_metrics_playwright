@@ -1,0 +1,64 @@
+name: Site metrics Playwright
+
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: "Unieke id"
+        required: true
+        type: string
+      website:
+        description: "Website URL"
+        required: true
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    outputs:
+      website: ${{ steps.metrics.outputs.website }}
+      totalPages: ${{ steps.metrics.outputs.totalPages }}
+      averageWords: ${{ steps.metrics.outputs.averageWords }}
+      id: ${{ steps.metrics.outputs.id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run metrics
+        id: metrics
+        run: |
+          set -e
+          OUTPUT=$(python scripts/site_metrics_playwright.py "${{ inputs.id }}" "${{ inputs.website }}")
+          echo "$OUTPUT"
+
+          WEBSITE=$(echo "$OUTPUT" | grep '^website=' | cut -d'=' -f2-)
+          TOTALPAGES=$(echo "$OUTPUT" | grep '^totalPages=' | cut -d'=' -f2-)
+          AVERAGEWORDS=$(echo "$OUTPUT" | grep '^averageWords=' | cut -d'=' -f2-)
+          IDVAL=$(echo "$OUTPUT" | grep '^id=' | cut -d'=' -f2-)
+
+          echo "website=$WEBSITE" >> "$GITHUB_OUTPUT"
+          echo "totalPages=$TOTALPAGES" >> "$GITHUB_OUTPUT"
+          echo "averageWords=$AVERAGEWORDS" >> "$GITHUB_OUTPUT"
+          echo "id=$IDVAL" >> "$GITHUB_OUTPUT"
+
+      - name: Print result JSON
+        run: |
+          echo '{'
+          echo '  "website": "${{ steps.metrics.outputs.website }}",'
+          echo '  "totalPages": ${{ steps.metrics.outputs.totalPages }},'
+          echo '  "averageWords": ${{ steps.metrics.outputs.averageWords }},'
+          echo '  "id": "${{ steps.metrics.outputs.id }}"'
+          echo '}'
