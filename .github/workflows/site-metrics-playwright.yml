@@ -53,7 +53,17 @@ jobs:
           echo "totalPages=$TOTALPAGES" >> "$GITHUB_OUTPUT"
           echo "averageWords=$AVERAGEWORDS" >> "$GITHUB_OUTPUT"
           echo "id=$IDVAL" >> "$GITHUB_OUTPUT"
-          
+      - name: Post result to n8n webhook
+        run: |
+          curl -sS -X POST "https://rbmedia.app.n8n.cloud/webhook/213c7dd1-c4ea-4826-8fe1-a76ef71800ff" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "website":"${{ steps.metrics.outputs.website }}",
+              "totalPages":${{ steps.metrics.outputs.totalPages }},
+              "averageWords":${{ steps.metrics.outputs.averageWords }},
+              "id":"${{ steps.metrics.outputs.id }}"
+            }'
+
       - name: Write result.json
         run: |
           cat > result.json << 'EOF'
